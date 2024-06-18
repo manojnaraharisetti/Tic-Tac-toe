@@ -1,8 +1,10 @@
-let boxes = document.querySelectorAll(".box");
-let msgcon = document.querySelector(".msg-container");
-let msg = document.querySelector("#msg");
-let newbtn = document.querySelector("#new-btn");
-let rstbtn = document.querySelector("#reset-btn");
+const boxes = document.querySelectorAll(".box");
+const msgcon = document.querySelector(".msg-container");
+const msg = document.querySelector("#msg");
+const newbtn = document.querySelector("#new-btn");
+const rstbtn = document.querySelector("#reset-btn");
+const roomInput = document.querySelector("#room-input");
+const joinBtn = document.querySelector("#join-btn");
 
 const winpatterns = [
     [0, 1, 2],
@@ -19,29 +21,42 @@ let playerSymbol = ""; // 'X' or 'O'
 let currentTurn = 'X'; // Track whose turn it is
 let count = 0; // to track the draw game
 
-const socket = new WebSocket('wss://tic-tac-toe-1-fd3m.onrender.com');
+let socket = null;
 let player = 0;
 
-socket.addEventListener('message', event => {
-    const data = JSON.parse(event.data);
-    if (data.type === 'welcome') {
-        player = data.player;
-        playerSymbol = player === 1 ? 'X' : 'O';
-        console.log(`You are player ${player}, symbol: ${playerSymbol}`);
-    } else if (data.type === 'move') {
-        const box = document.querySelectorAll('.box')[data.index];
-        box.innerText = data.symbol;
-        box.disabled = true;
-        count++;
-        checkWinner();
-        // if (count == 9 && !isWinner) {
-        //     gamedraw();
-        // }
-        currentTurn = currentTurn === 'X' ? 'O' : 'X'; // Switch turn
-    } else if (data.type === 'reset') {
-        resetgame();
-    }
-});
+function initWebSocket() {
+    socket = new WebSocket('wss://tic-tac-toe-1-fd3m.onrender.com');
+
+    socket.addEventListener('message', event => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'welcome') {
+            player = data.player;
+            playerSymbol = player === 1 ? 'X' : 'O';
+            console.log(`You are player ${player}, symbol: ${playerSymbol}`);
+        } else if (data.type === 'move') {
+            const box = document.querySelectorAll('.box')[data.index];
+            box.innerText = data.symbol;
+            box.disabled = true;
+            count++;
+            checkWinner();
+            currentTurn = currentTurn === 'X' ? 'O' : 'X'; // Switch turn
+        } else if (data.type === 'reset') {
+            resetgame();
+        }
+    });
+
+    socket.addEventListener('open', event => {
+        enableboxes(); // Enable all boxes when the WebSocket connection is established
+    });
+}
+
+function joinRoom(roomId) {
+    socket.send(JSON.stringify({ type: 'join', roomId }));
+}
+
+function createRoom() {
+    socket.send(JSON.stringify({ type: 'create' }));
+}
 
 boxes.forEach((box, index) => {
     box.addEventListener('click', () => {
@@ -51,51 +66,58 @@ boxes.forEach((box, index) => {
             count++; // Increment count only after a successful move
             socket.send(JSON.stringify({ type: 'move', index, symbol: playerSymbol }));
             checkWinner();
-            // if (count === 9 && !isWinner) { // Check for draw only after all boxes are filled
-            //     gamedraw();
-            // }
         }
     });
 });
 
+rstbtn.addEventListener("click", () => {
+    socket.send(JSON.stringify({ type: 'reset' }));
+});
 
-let resetgame = () => {
+newbtn.addEventListener("click", () => {
+    socket.send(JSON.stringify({ type: 'reset' }));
+});
+
+joinBtn.addEventListener("click", () => {
+    const roomId = roomInput.value.trim();
+    if (roomId !== '') {
+        joinRoom(roomId);
+    }
+});
+
+function resetgame() {
     currentTurn = 'X';
     count = 0;
     enableboxes();
     msgcon.classList.add("hide");
 }
 
-let enableboxes = () => {
+function enableboxes() {
     boxes.forEach(box => {
         box.disabled = false;
         box.innerText = "";
     });
 }
 
-let disableboxes = () => {
+function disableboxes() {
     boxes.forEach(box => {
         box.disabled = true;
     });
 }
 
-let gamedraw = () => {
+function gamedraw() {
     msg.innerText = "Game is a Draw";
     msgcon.classList.remove("hide");
     disableboxes();
 }
 
-const showwinner = (winner) => {
+function showwinner(winner) {
     msg.innerText = `Winner is ${winner}`;
     msgcon.classList.remove("hide");
     disableboxes();
 }
 
-socket.addEventListener('open', event => {
-    enableboxes(); // Enable all boxes when the WebSocket connection is established
-});
-
-const checkWinner = () => {
+function checkWinner() {
     let filledBoxes = 0; // Count how many boxes are filled
     for (let box of boxes) {
         if (box.innerText !== "") {
@@ -122,12 +144,4 @@ const checkWinner = () => {
     return false; // Return false as there's no winner or draw yet
 }
 
-
-
-rstbtn.addEventListener("click", () => {
-    socket.send(JSON.stringify({ type: 'reset' }));
-});
-
-newbtn.addEventListener("click", () => {
-    socket.send(JSON.stringify({ type: 'reset' }));
-});
+initWebSocket();
