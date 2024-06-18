@@ -7,7 +7,10 @@ const server = new WebSocket.Server({ port });
 let gameSessions = []; // Array to hold game sessions
 
 server.on('connection', socket => {
+    console.log('Client connected');
+
     socket.on('message', message => {
+        console.log('Received message:', message);
         const data = JSON.parse(message);
 
         if (data.type === 'create') {
@@ -22,6 +25,7 @@ server.on('connection', socket => {
 
             // Notify the creator with the room ID and their player number
             socket.send(JSON.stringify({ type: 'roomCreated', roomId: roomID, player: 1 }));
+            console.log(`Created new room with ID ${roomID}`);
 
         } else if (data.type === 'join') {
             // Join an existing game session (room) based on room ID
@@ -37,9 +41,12 @@ server.on('connection', socket => {
 
                 // Notify the player with their player number and symbol ('X' or 'O')
                 socket.send(JSON.stringify({ type: 'joined', player: playerNumber, symbol: playerNumber === 1 ? 'X' : 'O' }));
+                console.log(`Player joined room ${roomID} as player ${playerNumber}`);
+
             } else {
                 // Room doesn't exist or is full, notify the user accordingly
                 socket.send(JSON.stringify({ type: 'roomFull' }));
+                console.log(`Join request for room ${roomID} failed: Room full or doesn't exist`);
             }
         } else if (data.type === 'move') {
             // Broadcast the move to all players in the session
@@ -48,6 +55,7 @@ server.on('connection', socket => {
                 player.send(JSON.stringify(data));
             });
             session.currentPlayer = (session.currentPlayer + 1) % 2;
+            console.log(`Player ${data.player} made a move in room ${session.roomId}`);
 
         } else if (data.type === 'reset') {
             // Reset the game for all players in the session
@@ -56,10 +64,13 @@ server.on('connection', socket => {
                 player.send(JSON.stringify(data));
             });
             session.currentPlayer = 0;
+            console.log(`Game reset in room ${session.roomId}`);
         }
     });
 
     socket.on('close', () => {
+        console.log('Client disconnected');
+
         // Remove the player from their session when they disconnect
         gameSessions.forEach(session => {
             session.players = session.players.filter(player => player !== socket);
@@ -67,6 +78,7 @@ server.on('connection', socket => {
             // If a session becomes empty, remove it from gameSessions
             if (session.players.length === 0) {
                 gameSessions = gameSessions.filter(s => s !== session);
+                console.log(`Room ${session.roomId} removed due to no active players`);
             }
         });
     });

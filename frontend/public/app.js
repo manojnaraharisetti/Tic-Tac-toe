@@ -5,6 +5,7 @@ const newbtn = document.querySelector("#new-btn");
 const rstbtn = document.querySelector("#reset-btn");
 const roomInput = document.querySelector("#room-input");
 const joinBtn = document.querySelector("#join-btn");
+const createBtn = document.querySelector("#create-btn");
 
 const winpatterns = [
     [0, 1, 2],
@@ -23,6 +24,7 @@ let count = 0; // to track the draw game
 
 let socket = null;
 let player = 0;
+let roomId = null; // Store the current room ID
 
 function initWebSocket() {
     socket = new WebSocket('wss://tic-tac-toe-1-fd3m.onrender.com');
@@ -42,6 +44,10 @@ function initWebSocket() {
             currentTurn = currentTurn === 'X' ? 'O' : 'X'; // Switch turn
         } else if (data.type === 'reset') {
             resetgame();
+        } else if (data.type === 'roomCreated') {
+            roomId = data.roomId;
+            console.log(`Room created with ID: ${roomId}`);
+            // Display or use roomId as needed in your UI
         }
     });
 
@@ -83,6 +89,10 @@ joinBtn.addEventListener("click", () => {
     if (roomId !== '') {
         joinRoom(roomId);
     }
+});
+
+createBtn.addEventListener("click", () => {
+    createRoom();
 });
 
 function resetgame() {
