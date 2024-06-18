@@ -19,7 +19,7 @@ let playerSymbol = ""; // 'X' or 'O'
 let currentTurn = 'X'; // Track whose turn it is
 let count = 0; // to track the draw game
 
-const socket = new WebSocket('ws://tic-tac-toe-gwyu.onrender.com');
+const socket = new WebSocket('https://tic-tac-toe-gwyu.onrender.com');
 let player = 0;
 
 socket.addEventListener('message', event => {
