@@ -1,9 +1,10 @@
 const WebSocket = require('ws');
+const port = process.env.PORT || 3000;
 
-const server = new WebSocket.Server({ port: 3000 });
+const server = new WebSocket.Server({ port });
 
 let players = [];
-let currentPlayer = 0; // Track the current player
+let currentPlayer = 0;
 
 server.on('connection', socket => {
     if (players.length < 2) {
@@ -16,18 +17,14 @@ server.on('connection', socket => {
 
     socket.on('message', message => {
         const data = JSON.parse(message);
-        
-        // Handle game moves
+
         if (data.type === 'move') {
-            // Broadcast move to all players
             players.forEach(player => {
                 player.send(JSON.stringify(data));
             });
-            // Switch current player
             currentPlayer = (currentPlayer + 1) % 2;
         }
 
-        // Handle game reset
         if (data.type === 'reset') {
             players.forEach(player => {
                 player.send(JSON.stringify(data));
@@ -41,4 +38,4 @@ server.on('connection', socket => {
     });
 });
 
-console.log('WebSocket server is running on ws://localhost:8080');
+console.log(`WebSocket server is running on ws://localhost:${port}`);
